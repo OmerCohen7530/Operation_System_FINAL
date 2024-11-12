@@ -1,0 +1,33 @@
+#ifndef MST_HPP
+#define MST_HPP
+
+#include <vector>
+#include <tuple>
+
+class MST {
+public:
+    // Constructor
+    MST(const std::vector<std::vector<int>>& graph, int n);
+
+    // MST calculation functions
+    std::vector<std::tuple<int, int, int, int>> boruvkaMST();
+    std::vector<std::tuple<int, int, int, int>> primMST();
+
+    // Analysis functions
+    int getTotalWeight();
+    int getLongestDistance(int u, int v);        // Longest distance between two vertices u and v
+    double getAverageEdgeCount(int u, int v);    // Average edge count between two vertices u and v
+    int getShortestDistance(int u, int v);       // Shortest distance between two vertices u and v
+
+private:
+    int numVertices;
+    std::vector<std::vector<int>> graph;         // Graph representation
+    std::vector<std::tuple<int, int, int, int>> mstEdges; // Holds the MST edges
+
+    // Helper functions
+    void calculateMSTUsingPrim();
+    void calculateMSTUsingBoruvka();
+    std::vector<std::tuple<int, int, int, int>> convertGraphToEdges();
+};
+
+#endif // MST_HPP
