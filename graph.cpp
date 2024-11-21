@@ -1,34 +1,37 @@
 #include "graph.hpp"
-#include <algorithm> // for std::find
+#include <stdexcept> // For exceptions
 
 // Constructor
 Graph::Graph(int vertices) : vertexCount(vertices), edgeCount(0) {
-    adjList.resize(vertices);
+    // Initialize the adjacency matrix with zeros
+    adjMatrix.resize(vertices, vector<int>(vertices, 0));
 }
 
-// Function to add an edge between vertices u and v
-void Graph::addEdge(int u, int v) {
-    if (u >= 0 && u < vertexCount && v >= 0 && v < vertexCount) {
-        adjList[u].push_back(v);
-        adjList[v].push_back(u); // Add edge in both directions
-        ++edgeCount;
+// Function to add an edge between vertices u and v with a given weight
+void Graph::addEdge(int u, int v, int weight) {
+    if (u < 0 || u >= vertexCount || v < 0 || v >= vertexCount) {
+        throw std::out_of_range("Vertex index out of range");
     }
+    if (weight <= 0) {
+        throw std::invalid_argument("Weight must be positive");
+    }
+    // Add the weight to the adjacency matrix
+    if (adjMatrix[u][v] == 0) {
+        edgeCount++; // Only increment edge count if the edge is new
+    }
+    adjMatrix[u][v] = weight;
+    adjMatrix[v][u] = weight; // For undirected graph
 }
 
 // Function to remove an edge between vertices u and v
 void Graph::removeEdge(int u, int v) {
-    if (u >= 0 && u < vertexCount && v >= 0 && v < vertexCount) {
-        auto itU = std::find(adjList[u].begin(), adjList[u].end(), v);
-        if (itU != adjList[u].end()) {
-            adjList[u].erase(itU);
-        }
-
-        auto itV = std::find(adjList[v].begin(), adjList[v].end(), u);
-        if (itV != adjList[v].end()) {
-            adjList[v].erase(itV);
-        }
-        
-        --edgeCount;
+    if (u < 0 || u >= vertexCount || v < 0 || v >= vertexCount) {
+        throw std::out_of_range("Vertex index out of range");
+    }
+    if (adjMatrix[u][v] != 0) {
+        adjMatrix[u][v] = 0;
+        adjMatrix[v][u] = 0; // For undirected graph
+        edgeCount--; // Decrement edge count
     }
 }
 
@@ -42,7 +45,7 @@ int Graph::getEdgeCount() const {
     return edgeCount;
 }
 
-// Function to get the adjacency list representation of the graph
-std::vector<std::vector<int>> Graph::getGraph() {
-    return adjList;
+// Getter for the adjacency matrix
+vector<vector<int>> Graph::getGraph() const {
+    return adjMatrix;
 }

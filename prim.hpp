@@ -10,7 +10,6 @@ using namespace std;
 // Implementation of Prim's algorithm for finding a MST.
 // Assumptions: vector<edges> corresponds to the edges of a connected graph 
 // Complexity: O(m log n)
-vector<tuple<int, int, int, int>> prim(const vector<tuple<int, int, int, int>>& edges,
-								  int n);
+vector<tuple<int, int, int, int>> prim(const vector<tuple<int, int, int, int>>& edges,int n);
 
 #endif

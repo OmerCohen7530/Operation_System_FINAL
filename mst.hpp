@@ -3,11 +3,14 @@
 
 #include <vector>
 #include <tuple>
+#include <string>
 
 class MST {
 public:
     // Constructor
-    MST(const std::vector<std::vector<int>>& graph, int n);
+    MST(const std::vector<std::vector<int>>& graph, int n, const std::string& algo);
+    // Constructor without algorithm
+    MST(const std::vector<std::vector<int>>& graph, int n): graph(graph), numVertices(n) {}
 
     // MST calculation functions
     std::vector<std::tuple<int, int, int, int>> boruvkaMST();
@@ -16,7 +19,7 @@ public:
     // Analysis functions
     int getTotalWeight();
     int getLongestDistance(int u, int v);        // Longest distance between two vertices u and v
-    double getAverageEdgeCount(int u, int v);    // Average edge count between two vertices u and v
+    double getAverageEdgeCount();    // Average between all pairs of vertices
     int getShortestDistance(int u, int v);       // Shortest distance between two vertices u and v
 
 private:
