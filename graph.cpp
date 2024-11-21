@@ -6,6 +6,10 @@ Graph::Graph(int vertices) : vertexCount(vertices), edgeCount(0) {
     // Initialize the adjacency matrix with zeros
     adjMatrix.resize(vertices, vector<int>(vertices, 0));
 }
+Graph::Graph() : vertexCount(0), edgeCount(0) {
+    // Initialize the adjacency matrix with zeros
+    adjMatrix.resize(0, vector<int>(0, 0));
+}
 
 // Function to add an edge between vertices u and v with a given weight
 void Graph::addEdge(int u, int v, int weight) {

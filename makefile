@@ -1,16 +1,42 @@
-# Compiler
+# Compiler and flags
 CXX = g++
-# Compiler flags
-CXXFLAGS = -std=c++17 -Wall -Wextra -g
-# Files and output
-TARGET = pipeline_server
-SRCS = pipeline_server.cpp graph.cpp mst.cpp boruvka.cpp prim.cpp
-HEADERS = graph.hpp mst.hpp boruvka.hpp prim.hpp
+CXXFLAGS = -std=c++17 -g
 
-# Rule for compiling the target
-$(TARGET): $(SRCS) $(HEADERS)
-	$(CXX) $(CXXFLAGS) $(SRCS) -o $(TARGET)
 
-# Clean up the compiled files
+# Source files
+SOURCES = graph.cpp mst.cpp prim.cpp boruvka.cpp
+HEADERS = graph.hpp mst.hpp prim.hpp boruvka.hpp
+PIPELINE_SERVER = pipeline_server.cpp
+LEADER_FOLLOWER_SERVER = leaderFollower_Server.cpp
+
+# Object files
+OBJECTS = $(SOURCES:.cpp=.o)
+
+# Executable names
+PIPELINE_SERVER_EXEC = pipeline_server
+LEADER_FOLLOWER_EXEC = leaderFollower_Server
+
+# Default target
+all: $(PIPELINE_SERVER_EXEC) $(LEADER_FOLLOWER_EXEC)
+
+# Rule for building the pipeline server
+$(PIPELINE_SERVER_EXEC): $(OBJECTS) $(PIPELINE_SERVER)
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+# Rule for building the leader-follower server
+$(LEADER_FOLLOWER_EXEC): $(OBJECTS) $(LEADER_FOLLOWER_SERVER)
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+# Rule for building object files
+%.o: %.cpp %.hpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Clean up build artifacts
 clean:
-	rm -f $(TARGET)
+	rm -f $(OBJECTS) $(PIPELINE_SERVER_EXEC) $(LEADER_FOLLOWER_EXEC)
+
+# Phony targets
+.PHONY: all clean
+
+#./pipeline_server
+#nc localhost 9080

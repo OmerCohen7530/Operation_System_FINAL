@@ -11,6 +11,8 @@ public:
     MST(const std::vector<std::vector<int>>& graph, int n, const std::string& algo);
     // Constructor without algorithm
     MST(const std::vector<std::vector<int>>& graph, int n): graph(graph), numVertices(n) {}
+    MST() : graph(), numVertices(0) {}
+
 
     // MST calculation functions
     std::vector<std::tuple<int, int, int, int>> boruvkaMST();

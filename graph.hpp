@@ -9,6 +9,8 @@ class Graph {
 public:
     // Constructor
     Graph(int vertices);
+    // empty costructor
+    Graph();
 
     // Functions to add and remove edges
     void addEdge(int u, int v, int weight);
