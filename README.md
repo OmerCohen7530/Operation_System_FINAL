@@ -22,8 +22,6 @@ The project provides functionality to calculate:
 2. **Factory Pattern**: Supports different MST algorithms:
    - Borůvka
    - Prim
-   - Kruskal
-   - Tarjan
 3. **Server**:
    - Handles client requests for MST-related operations.
    - Supports **Leader-Follower Thread Pool** and **Pipeline Active Object** for client handling.
