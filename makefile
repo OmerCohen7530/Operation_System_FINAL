@@ -1,7 +1,7 @@
 # Compiler and flags
 CXX = g++
 CXXFLAGS = -std=c++17 -g
-
+# CXXFLAGS = -std=c++17 -g -fprofile-arcs -ftest-coverage
 
 # Source files
 SOURCES = graph.cpp mst.cpp prim.cpp boruvka.cpp
@@ -31,9 +31,14 @@ $(LEADER_FOLLOWER_EXEC): $(OBJECTS) $(LEADER_FOLLOWER_SERVER)
 %.o: %.cpp %.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
+# Add this target to run Valgrind analysis
+# valgrind:
+# 	./run_valgrind.sh
+
+
 # Clean up build artifacts
 clean:
-	rm -f $(OBJECTS) $(PIPELINE_SERVER_EXEC) $(LEADER_FOLLOWER_EXEC)
+	rm -f $(OBJECTS) $(PIPELINE_SERVER_EXEC) $(LEADER_FOLLOWER_EXEC) *.gcno *.gcda *.gcov
 
 # Phony targets
 .PHONY: all clean

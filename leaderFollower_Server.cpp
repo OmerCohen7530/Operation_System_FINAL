@@ -13,7 +13,7 @@
 #include "mst.hpp"
 #include <csignal>
 
-#define PORT 8094
+#define PORT 8093
 #define THREAD_POOL_SIZE 4
 
 bool close_server = false;

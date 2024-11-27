@@ -14,7 +14,7 @@
 #include <csignal>
 #include <functional>
 
-#define PORT 8090 // Defines the port number on which the server will listen for client connections
+#define PORT 8092 // Defines the port number on which the server will listen for client connections
 bool close_server=false;
 /**
  * Class: ActiveObject
@@ -101,21 +101,21 @@ public:
 };
 
 
-std::string menu()
+    std::string menu()
 {
     std::stringstream ss;
-    ss << "Menu:\n";                                               // Adds the title "Menu:" to the stringstream
-    ss<< "0. Close server\n";                                       // Option 0: Close server
-    ss << "1. Create a new graph (provide adjacency matrix)\n";    // Option 1: Create a new graph
-    ss << "2. Add an edge (provide: from, to, weight)\n";          // Option 2: Add an edge to the graph
-    ss << "3. Remove an edge (provide: from, to)\n";               // Option 3: Remove an edge from the graph
-    ss << "4. Get total weight of MST\n";                          // Option 4: Calculate the weight of the MST
-    ss << "5. Get longest path in MST (provide: start, end)\n";    // Option 5: Calculate the longest path in the MST
-    ss << "6. Get shortest path in MST (provide: start, end)\n";   // Option 6: Calculate the shortest path in the MST
-    ss << "7. Get average distance between two vertices in MST\n"; // Option 7: Calculate average distance in the MST
-    ss << "8. Print MST\n";                                        // Option 8: Print the MST matrix
-    ss << "9. Exit\n";                                             // Option 9: Exit the program
-    return ss.str();                                               // Converts the stringstream to a string and returns it
+    ss << "Menu:\n";
+    ss << "0. Close server\n";
+    ss << "1. Create a new graph\n";
+    ss << "2. Add an edge\n";
+    ss << "3. Remove an edge\n";
+    ss << "4. Build MST by prim or boruvka\n";
+    ss << "5. Get total weight of MST\n";
+    ss << "6. Get longest distance in MST\n";
+    ss << "7. Get shortest distance in MST\n";
+    ss << "8. Get average distance between two vertices in MST\n";
+    ss << "9. Exit\n";
+    return ss.str();
 }
 
 bool check_is_valid_operation(int newSocket, bool graphExists, bool mstCreated){
