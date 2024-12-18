@@ -1,20 +1,20 @@
-#include <iostream>           // For standard I/O operations
-#include <thread>             // For creating and managing threads
-#include <queue>              // For task queues used in ActiveObject
-#include <mutex>              // For synchronizing access to shared resources
-#include <condition_variable> // For thread synchronization
-#include <sys/socket.h>       // For socket programming
-#include <netinet/in.h>       // For structures and constants related to internet addresses
-#include <unistd.h>           // For close() and other POSIX APIs
-#include <cstring>            // For string manipulation and error handling (e.g., strerror)
-#include <sstream>            // For string stream manipulation (menu building, parsing)
-#include <vector>             // For handling dynamic arrays (adjacency matrices)
-#include "graph.hpp"          // Includes custom Graph class
-#include "mst.hpp"            // Includes custom MST class
+#include <iostream>           
+#include <thread>            
+#include <queue>              
+#include <mutex> 
+#include <condition_variable> 
+#include <sys/socket.h>   
+#include <netinet/in.h>    
+#include <unistd.h>          
+#include <cstring>      
+#include <sstream>       
+#include <vector>          
+#include "graph.hpp"       
+#include "mst.hpp"          
 #include <csignal>
 #include <functional>
 
-#define PORT 8092 // Defines the port number on which the server will listen for client connections
+#define PORT 8074 // Defines the port number on which the server will listen for client connections
 bool close_server=false;
 /**
  * Class: ActiveObject
@@ -47,14 +47,14 @@ public:
                         {
                             std::unique_lock<std::mutex> lock(mutex);
                             cv.wait(lock, [this]() { return !tasks.empty() || !running; });
-                            if (!running){
+                            if (!running && tasks.empty()) {
                                 // std::cout << "Worker exiting: No tasks and stopped." << std::endl;
                                 return;
                             }
                             task = std::move(tasks.front());
                             tasks.pop();
                         }
-                        // std::cout << "Executing task..." << std::endl;
+                        std::cout << "Executing task..." << std::endl;
                         task();  // Execute the task
                     }
                 } catch (const std::exception &e) {
@@ -72,8 +72,9 @@ public:
     {
         {
         std::unique_lock<std::mutex> lock(mutex);
+        // std::cout << "Adding task to queue..." << std::endl;
         tasks.push(task);
-        // std::cout << "Task added to queue. Queue size: " << tasks.size() << std::endl;
+        std::cout << "Task added to queue. Queue size: " << tasks.size() << std::endl;
         }
         cv.notify_one();
     }
@@ -100,286 +101,160 @@ public:
     }
 };
 
-
-    std::string menu()
+Graph build_graph(int newSocket)
 {
-    std::stringstream ss;
-    ss << "Menu:\n";
-    ss << "0. Close server\n";
-    ss << "1. Create a new graph\n";
-    ss << "2. Add an edge\n";
-    ss << "3. Remove an edge\n";
-    ss << "4. Build MST by prim or boruvka\n";
-    ss << "5. Get total weight of MST\n";
-    ss << "6. Get longest distance in MST\n";
-    ss << "7. Get shortest distance in MST\n";
-    ss << "8. Get average distance between two vertices in MST\n";
-    ss << "9. Exit\n";
-    return ss.str();
+    std::string response = "----------Graph creation----------\nEnter the number of vertices: ";
+    send(newSocket, response.c_str(), response.size(), 0);
+
+    char answer[1024] = {0};
+    read(newSocket, answer, 1024);
+    int numVertices = std::stoi(answer);
+
+    // Create a new graph with the given number of vertices
+    Graph graph = Graph(numVertices); 
+
+    response = "Enter the number of edges: ";
+    send(newSocket, response.c_str(), response.size(), 0);
+
+    answer[1024] = {0};
+    read(newSocket, answer, 1024);
+    int numEdges = std::stoi(answer);
+
+    // Add edges to the graph
+    for (int i = 0; i < numEdges; ++i)
+    {
+        response = "Enter an edge (from, to, weight): ";
+        send(newSocket, response.c_str(), response.size(), 0);
+
+        int from, to, weight;
+        char edgeBuffer[1024] = {0};
+        read(newSocket, edgeBuffer, 1024);
+        std::istringstream edgeStream(edgeBuffer);
+        edgeStream >> from >> to >> weight;
+        graph.addEdge(from, to, weight);
+        std::string response = "Edge from " + std::to_string(from) + " -> " + std::to_string(to) +" with weight " + std::to_string(weight) + " added successfully!\n";
+        send(newSocket, response.c_str(), response.size(), 0);
+    }
+    response = "New graph created!\n";
+    send(newSocket, response.c_str(), response.size(), 0);
+
+    return graph;
 }
 
-bool check_is_valid_operation(int newSocket, bool graphExists, bool mstCreated){
-    //check if the graph is created, if not return response to create graph first
-    if (!graphExists)
-    {
-        std::string response = "Create a graph first!\n";
-        send(newSocket, response.c_str(), response.size(), 0);
-        return false;
+MST build_mst(Graph graph, int newSocket)
+{
+    std::string response = "----------MST creation----------\nEnter the algorithm of MST (prim or boruvka): ";
+    send(newSocket, response.c_str(), response.size(), 0);
+
+    char algoBuffer[1024] = {0};
+    read(newSocket, algoBuffer, 1024);
+    std::string algo(algoBuffer);
+
+    // if (algo != "prim" && algo != "boruvka") so make it prim
+    if (algo != "prim" && algo != "boruvka") {
+        algo = "prim";
     }
-    // check if the MST is created, if not return response to create MST first
-    if (!mstCreated)
-    {
-        std::string response = "Create an MST first!\n";
-        send(newSocket, response.c_str(), response.size(), 0);
-        return false;
-    }
-    return true;
+
+    // Trim whitespace and newline characters
+    // algo.erase(algo.find_last_not_of(" \t\n\r") + 1);
+
+    MST mst = MST(graph.getGraph(), graph.getVertexCount(), algo); // Create the MST
+    response = "MST created using " + algo + " algorithm\n";
+    send(newSocket, response.c_str(), response.size(), 0);
+
+    return mst;
+}
+
+void analyze_data(MST mst, int newSocket)
+{
+    std::stringstream ss;
+
+    ss << "----------analyze_data----------\n";
+    ss << "Total Weight:  " << mst.getTotalWeight() << "\n";
+    ss << "Longest Distance (e.g. 0->1):  " << mst.getLongestDistance(0, 1) << "\n";
+    ss << "Shortest Distance (e.g. 0->1):  " << mst.getShortestDistance(0, 1) << "\n";
+    ss << "Average Edge Count:  " << mst.getAverageEdgeCount() << "\n";
+
+    send(newSocket, (ss.str()).c_str(), (ss.str()).size(), 0);
 }
 
 void handleClientPipeline(int newSocket)
 {
-    // Stage 1: Requests to create, add, or remove edges
-    // Stage 2: Requests to calculate the MST weight
-    // Stage 3: Request to print all calculated values 
+    // Stage 1: Graph creation
+    // Stage 2: MST creation
+    // Stage 3: Analyze data
     ActiveObject stage1, stage2, stage3;  // ActiveObject instances to handle stages of the pipeline
-    static Graph graph = Graph(0); // Empty graph
-    static MST mst(graph.getGraph(), graph.getVertexCount()); // empty MST
-    static bool mstCreated = false;                    // Tracks whether the MST has been created
-    static bool graphExists = false;                          // Tracks whether a graph has been created
 
-    while (true)
+    std::cout << "Pipeline started for client..." << std::endl;
+
+    // Condition variable for synchronization
+    std::mutex mutex;
+    std::condition_variable cv_2;
+    bool stage1Done = false;
+    bool stage2Done = false;
+    bool stage3Done = false;
+
+    // Stage 1: Build graph
+    stage1.post([&stage2, &stage3, &cv_2, &mutex, &stage1Done, &stage2Done, &stage3Done, newSocket]() {
+        Graph graph = build_graph(newSocket);
+
+        // Notify Stage 1
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            stage1Done = true;
+        }
+        cv_2.notify_one();
+
+        // Pass the result to the next stage
+        stage2.post([&stage3, &cv_2, &mutex, &stage2Done, &stage3Done, graph, newSocket]() {
+            MST mst = build_mst(graph, newSocket);
+
+            // Notify Stage 2
+            {
+                std::lock_guard<std::mutex> lock(mutex);
+                stage2Done = true;
+            }
+            cv_2.notify_one();
+
+            std::shared_ptr<MST> mstPtr = std::make_shared<MST>(mst);
+
+            // Pass the result to the final stage
+            stage3.post([&cv_2, &mutex, &stage3Done, mstPtr, newSocket]() {
+                std::cout << "Analyzing data 2..." << std::endl;
+                analyze_data(*mstPtr, newSocket);
+
+                // Notify Stage 3
+                {
+                    std::lock_guard<std::mutex> lock(mutex);
+                    stage3Done = true;
+                }
+                cv_2.notify_one();
+            });
+        });
+    });
+
+    // Wait for Stage 1 to finish
     {
-        // Send the menu to the client
-        std::string welcome = menu();
-        send(newSocket, welcome.c_str(), welcome.size(), 0);
-
-        // Read client input
-        char buffer[1024] = {0};
-        ssize_t bytes_read = read(newSocket, buffer, 1024);
-        if (bytes_read <= 0)
-        {
-            std::cerr << "Client disconnected or error: " << strerror(errno) << std::endl;
-            close(newSocket);
-            return;
-        }
-
-        std::string input(buffer);
-        std::istringstream iss(input);
-        int choice;
-        iss >> choice;
-
-        switch (choice)
-        { 
-        case 0:
-        {//close server
-            close(newSocket);
-            close_server=true;
-            return;
-        } 
-        case 1:
-        { // Create a new graph
-            std::string response = "Enter the number of vertices: ";
-            send(newSocket, response.c_str(), response.size(), 0);
-
-            char answer[1024] = {0};
-            read(newSocket, answer, 1024);
-            int numVertices = std::stoi(answer);
-
-            // Create a new graph with the given number of vertices
-            graph = Graph(numVertices); 
-
-            response = "Enter the number of edges: ";
-            send(newSocket, response.c_str(), response.size(), 0);
-
-            answer[1024] = {0};
-            read(newSocket, answer, 1024);
-            int numEdges = std::stoi(answer);
-
-            // Add edges to the graph
-            for (int i = 0; i < numEdges; ++i)
-            {
-                response = "Enter an edge (from, to, weight): ";
-                send(newSocket, response.c_str(), response.size(), 0);
-
-                int from, to, weight;
-                char edgeBuffer[1024] = {0};
-                read(newSocket, edgeBuffer, 1024);
-                std::istringstream edgeStream(edgeBuffer);
-                edgeStream >> from >> to >> weight;
-                
-                // Add the edge to the graph
-                stage1.post([&]()
-                            {
-                            graph.addEdge(from, to, weight);
-                            std::string response = "Edge from " + std::to_string(from) + " -> " + std::to_string(to) +" with weight " + std::to_string(weight) + " added successfully!\n";
-                            send(newSocket, response.c_str(), response.size(), 0); });
-                            
-
-            }
-
-            mstCreated = false;        // Reset the MST flag
-            graphExists = true;        // Mark that the graph exists
-            response = "New graph created!\n";
-            send(newSocket, response.c_str(), response.size(), 0);
-            break;
-        }
-        case 2:
-        { // Add an edge
-            std::string response = "Enter an edge (from, to, weight): ";
-            send(newSocket, response.c_str(), response.size(), 0);
-
-            int from, to, weight;
-            char edgeBuffer[1024] = {0};
-            read(newSocket, edgeBuffer, 1024);
-            std::istringstream edgeStream(edgeBuffer);
-            edgeStream >> from >> to >> weight;
-
-            stage1.post([&]()
-                        {
-                        graph.addEdge(from, to, weight);
-                        std::string response = "Edge from " + std::to_string(from) + " -> " + std::to_string(to) +" with weight " + std::to_string(weight) + " added successfully!\n";
-                        mstCreated = false; // Reset MST flag
-                        send(newSocket, response.c_str(), response.size(), 0); });
-            break;
-        }
-        case 3:
-        { // Remove an edge
-            std::string response = "Enter an edge to remove (from, to): ";
-            send(newSocket, response.c_str(), response.size(), 0);
-
-            int from, to, weight;
-            char edgeBuffer[1024] = {0};
-            read(newSocket, edgeBuffer, 1024);
-            std::istringstream edgeStream(edgeBuffer);
-            edgeStream >> from >> to >> weight;
-
-            stage1.post([&]()
-                        {
-                        graph.removeEdge(from, to);
-                        std::string response = "Edge from " + std::to_string(from) + " -> " + std::to_string(to) +" removed successfully!\n";
-                        mstCreated = false; // Reset MST flag
-                        send(newSocket, response.c_str(), response.size(), 0); });
-            break;
-        }
-        // hoose algorithm of MST
-        case 4:
-        {
-            //check if the graph is created, if not return response to create graph first
-            if (!graphExists)
-            {
-                std::string response = "Create a graph first!\n";
-                send(newSocket, response.c_str(), response.size(), 0);
-                break;
-            }
-            std::string response = "Enter the algorithm of MST (prim or boruvka): ";
-            send(newSocket, response.c_str(), response.size(), 0);
-
-            char algoBuffer[1024] = {0};
-            read(newSocket, algoBuffer, 1024);
-            std::string algo(algoBuffer);
-
-            // Trim whitespace and newline characters
-            algo.erase(algo.find_last_not_of(" \t\n\r") + 1);
-
-            // check if the algorithm is prim or boruvka
-            if (algo != "prim" && algo != "boruvka") {
-                std::string response = "Invalid algorithm. Please try again.\n";
-                send(newSocket, response.c_str(), response.size(), 0);
-                break;
-            }
-
-            stage2.post([&]()
-                        {
-                        mst = MST(graph.getGraph(), graph.getVertexCount(), algo); // Create the MST
-                        mstCreated = true;
-                        std::string response = "MST created using " + algo + " algorithm\n";
-                        send(newSocket, response.c_str(), response.size(), 0); });
-            break;
-        }
-        case 5:
-        { // Get MST weight
-
-            if(!check_is_valid_operation(newSocket, graphExists, mstCreated))break;
-
-            stage2.post([&]()
-                        {
-                        int weight = mst.getTotalWeight();
-                        std::string response = "Total weight of MST: " + std::to_string(weight) + "\n";
-                        send(newSocket, response.c_str(), response.size(), 0); });
-            break;
-        }
-        case 6:
-        { // Get the longest distance in the MST
-
-            if(!check_is_valid_operation(newSocket, graphExists, mstCreated))break;
-
-            std::string response = "Provide the start and end vertices for the longest path: ";
-            send(newSocket, response.c_str(), response.size(), 0);
-
-            char pathBuffer[1024] = {0};
-            read(newSocket, pathBuffer, 1024);
-            std::istringstream pathStream(pathBuffer);
-            int from, to;
-            pathStream >> from >> to;
-
-            stage3.post([&]()
-                        {
-                        int path = mst.getLongestDistance(from, to);
-                        std::string response = "Longest distance from " + std::to_string(from) + " to " + std::to_string(to) + ": " + std::to_string(path) + "\n";
-                        send(newSocket, response.c_str(), response.size(), 0); });
-            break;
-
-        }
-        case 7:
-        { // Get the shortest distance in the MST
-
-            if(!check_is_valid_operation(newSocket, graphExists, mstCreated))break;
-
-            std::string response = "Provide the start and end vertices for the shortest path: ";
-            send(newSocket, response.c_str(), response.size(), 0);
-
-            char pathBuffer[1024] = {0};
-            read(newSocket, pathBuffer, 1024);
-            std::istringstream pathStream(pathBuffer);
-            int from, to;
-            pathStream >> from >> to;
-
-            stage3.post([&]()
-                        {
-                        int path = mst.getShortestDistance(from, to);
-                        std::string response = "shortest distance from " + std::to_string(from) + " to " + std::to_string(to) + ": " + std::to_string(path) + "\n";
-                        send(newSocket, response.c_str(), response.size(), 0); });
-            break;
-        }
-        case 8:
-        { // Get the average distance in the MST
-
-            if(!check_is_valid_operation(newSocket, graphExists, mstCreated))break;
-
-            stage3.post([&]()
-                        {
-                        int avg = mst.getAverageEdgeCount();
-                        std::string response = "Average distance in MST: " + std::to_string(avg) + "\n";
-                        send(newSocket, response.c_str(), response.size(), 0); });
-            break;
-        }
-        case 9:
-        { // Exit the program
-            close(newSocket);
-            return;
-        }
-        default: // Invalid choice
-            std::string response = "Invalid choice. Please try again.\n";
-            send(newSocket, response.c_str(), response.size(), 0);
-            break;
-        }
+        std::unique_lock<std::mutex> lock(mutex);
+        cv_2.wait(lock, [&stage1Done]() { return stage1Done; });
     }
+
+    // Wait for Stage 2 to finish
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        cv_2.wait(lock, [&stage2Done]() { return stage2Done; });
+    }
+
+    // Wait for Stage 3 to finish
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        cv_2.wait(lock, [&stage3Done]() { return stage3Done; });
+    }
+
+    std::this_thread::sleep_for(std::chrono::seconds(4)); 
+    close(newSocket);
 }
 
-/**
- * Main Function: Initializes the server and listens for client connections.
- * The server uses a socket to accept connections and handle multiple clients in parallel.
- */
 int main()
 {
     
@@ -422,27 +297,20 @@ int main()
         close(serverFd);
         exit(EXIT_FAILURE);
     }
-// ********************************************************************************************************************
-    // // Create an empty graph with an empty adjacency matrix
-    // Graph graph{std::vector<std::vector<int>>{}}; // Empty graph
+
 
     std::cout << "Server is running. Waiting for clients..." << std::endl;
 
     // Accept clients and handle them
-    while ((newSocket = accept(serverFd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) >= 0)
-    {
-        std::cout << "Accepted new client" << std::endl;
-        handleClientPipeline(newSocket); // Handle client requests
-        if(close_server)
-        {
-            close(serverFd);
-            return 0;
+    while (true) {
+        if ((newSocket = accept(serverFd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) {
+            std::cerr << "Accept failed: " << strerror(errno) << std::endl;
         }
-    }
 
-    if (newSocket < 0)
-    {
-        std::cerr << "Accept failed: " << strerror(errno) << std::endl;
+        std::cout << "Client connected! Starting the pipeline..." << std::endl;
+        handleClientPipeline(newSocket);
+        // std::thread clientThread(handleClientPipeline, newSocket);
+        // clientThread.detach();
     }
 
     close(serverFd);
